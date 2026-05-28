@@ -1,0 +1,773 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum Status {
+  ACTIVE
+  LOCKED
+}
+
+enum AccStatus {
+  ON
+  OFF
+  ERROR
+}
+
+model User {
+  id                          String    @id @default(cuid())
+  name                        String
+  email                       String    @unique
+  password                    String
+  role                        Role      @default(USER)
+  status                      Status    @default(ACTIVE)
+  // Phân quyền cây: ADMIN tạo USER → User.parentId = ADMIN.id.
+  // ADMIN chỉ thấy USER mình tạo. SUPER_ADMIN thấy tất cả.
+  parentId                    String?
+  // Loại USER: legacy field. DEPRECATED — thay bằng `permissions`. Giữ làm fallback.
+  userType                    String?
+  // Quyền truy cập menu — JSON array các key trong MENU_PERMISSIONS (src/lib/permissions.ts).
+  // VD: '["kho-video","chi-phi-van-phong"]'. Null = full access (admin hoặc legacy USER).
+  permissions                 String?
+  // Auto-create campaign: cron mỗi đầu giờ tự tạo campaign cho posts có campaignId nhưng adCreated=false.
+  // Posts đã adError thì SKIP (không retry tự động — user phải vào fanpage-posts click Retry).
+  // Config = JSON serialize từ campConfig client-side (objective, budget, target...).
+  autoCampaignEnabled         Boolean   @default(false)
+  autoCampaignConfig          String?
+  // Lưu kết quả lần cron auto-camp gần nhất để hiện banner trên UI.
+  autoCampaignLastRunAt       DateTime?
+  autoCampaignLastSuccess     Int       @default(0)
+  autoCampaignLastFailed      Int       @default(0)
+  // Auto-manage camp: cron 9h sáng VN daily — tự TẮT camp lỗ 3 ngày liên tiếp (sum < -100k)
+  // và tự TĂNG budget 30% nếu lãi 3 ngày liên tiếp (sum > +100k).
+  autoManageEnabled           Boolean   @default(false)
+  autoManageLastRunAt         DateTime?
+  autoManageLastOffCount      Int       @default(0)
+  autoManageLastBudgetUpCount Int       @default(0)
+  autoManageLastError         String?
+  // Product check (Shopee): cron 6h sáng scan camp có Post link Shopee → auto-pause nếu SP xoá/ẩn.
+  // Hết hàng (stock=0) CHỈ cảnh báo, KHÔNG tắt.
+  productCheckLastRunAt       DateTime?
+  productCheckLastPausedCount Int       @default(0)
+  productCheckLastError       String?
+  // Telegram alert cho cron billing 7h: balance/threshold >= 90% AND threshold > 2tr
+  telegramChatId              String?
+  telegramLastAlertAt         Json? // Map<actId, ISO timestamp> để không spam (1 alert/TKQC/ngày)
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  parent   User?  @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children User[] @relation("UserHierarchy")
+
+  fbBillings FbAdAccountBilling[]
+  fbInvoices FbAdAccountInvoice[]
+
+  accounts             AdAccount[]
+  pages                FanPage[]
+  campaigns            Campaign[]
+  posts                Post[]
+  fbToken              FbToken?
+  shopeeTokens         ShopeeAffiliateToken[]
+  accountGroups        AccountGroup[]
+  taxRecords           TaxRecord[]
+  campLogs             CampLog[]
+  mappings             SheetMapping[]
+  affiliateCommissions AffiliateCommissionDaily[]
+  officeExpenseCats    OfficeExpenseCategory[]
+  officeExpenses       OfficeExpense[]
+  shopeeBonuses        ShopeeBonus[]
+  loginSessions        LoginSession[]
+  orderCommissions     OrderCommission[]
+  cards                UserCard[]
+  billingInfos         AdAccountBillingInfo[]
+  nghiemThuItems       NghiemThuItem[]
+  shopeeAffiliateLabels ShopeeAffiliateLabel[]
+  pushSubscriptions    PushSubscription[]
+
+  @@map("users")
+}
+
+// Web Push subscription — 1 user có thể có nhiều device (mobile, laptop).
+// endpoint unique để upsert khi user re-subscribe cùng device.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique  // URL push service (FCM, Mozilla, etc.)
+  p256dh     String                // Client public key cho mã hoá
+  auth       String                // Auth secret
+  userAgent  String?               // Debug — biết device nào subscribe
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime?             // Cập nhật mỗi lần gửi push thành công
+  failCount  Int      @default(0)  // Tăng khi gửi fail; >5 → coi như expired, xoá
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// Nghiem thu Shopee Affiliates — luu item nghiem thu cho user.
+// Workflow: user upload file 1 (4 cot: account_id, campaign_name, old_ad_name, new_ad_name)
+// → app match ad_id qua FB API → luu DB → rename qua FB API.
+// Sau do user upload file 2 (FB Ads Manager export, co cot Ad Name + Body + Permalink)
+// → app match theo new_ad_name → update linkPost (Permalink) + shopeeLink (extract tu Body).
+// Cuoi cung user xuat Excel de nop Shopee.
+model NghiemThuItem {
+  id            String    @id @default(cuid())
+  userId        String
+  accountId     String    // act_xxx hoac bare xxx (luu bare khong prefix)
+  // affiliateId Shopee — auto parse tu newAdName (vd "17305500347_SHPAAR26_..." → "17305500347")
+  // Dung de filter multi-nick Shopee (user co nhieu nick affiliate).
+  affiliateId   String?
+  campaignName  String
+  oldAdName     String
+  newAdName     String
+  adId          String?   // FB ad ID match duoc tu file 1
+  lookupError   String?   // Loi lookup neu khong match duoc (TKQC chua sync / camp khong ton tai / ad name sai)
+  linkPost      String?   // Permalink tu file 2
+  shopeeLink    String?   // Extract tu Body file 2
+  renamedAt     DateTime? // Time rename thanh cong qua FB API
+  renameError   String?   // Loi rename neu fail
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountId, oldAdName])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, affiliateId])
+  @@map("nghiem_thu_items")
+}
+
+// Label cua tung nick Shopee Affiliate (user-friendly name cho affiliateId).
+// Vd: affiliateId="17305500347" → label="Tong Kho Ly Ngo".
+// User cau hinh qua modal "⚙️ Cau hinh nick" trong trang /nghiem-thu.
+model ShopeeAffiliateLabel {
+  id           String   @id @default(cuid())
+  userId       String
+  affiliateId  String
+  label        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, affiliateId])
+  @@map("shopee_affiliate_labels")
+}
+
+// Billing info user nhập tay cho TKQC.
+// Key theo (userId, actId) — actId là FB ID immutable, KHÔNG dùng FK tới AdAccount.id
+// → sync-assets xoá+tạo lại AdAccount bao nhiêu lần cũng không mất billing info.
+// (Pattern này giống AdAccountGroupAssignment đã rekey 2026-05-13 vì lý do tương tự.)
+model AdAccountBillingInfo {
+  id               String   @id @default(cuid())
+  userId           String
+  actId            String // FB ID (có hoặc không có prefix "act_", lưu chuẩn hoá theo input của AdAccount table)
+  bankName         String?
+  cardOwnerName    String?
+  cardLast4        String? // 4 so cuoi the (user nhap tay - de override khi FB API khong tra dung)
+  paymentThreshold BigInt?
+  billingNotes     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, actId])
+  @@index([userId])
+  @@map("ad_account_billing_info")
+}
+
+// Danh sach the thanh toan cua user (bank, owner, 4 so cuoi).
+// User nhap 1 lan, app tu match voi TKQC qua last4 cua funding_source.
+model UserCard {
+  id            String   @id @default(cuid())
+  userId        String
+  bankName      String // VIB, Vietcombank, TCB, MB...
+  cardOwnerName String // LE TRONG QUY...
+  cardLast4     String // 4 chu so cuoi (input chi 4 digits)
+  notes         String? // ghi chu noi bo (optional)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardLast4])
+  @@index([userId])
+  @@map("user_cards")
+}
+
+// Kho video — nhân viên tải video về R2, sinh affiliate link + caption, auto post FB.
+// Mỗi record = 1 video → 1 post FB (1 page chỉ định).
+//
+// Status flow:
+//   pending      → mới tạo, chưa tải video
+//   downloading  → đang tải video qua RapidAPI
+//   downloaded   → video đã ở R2, chưa gen aff link
+//   ready        → đã có aff link + caption, sẵn sàng post
+//   posting      → đang post FB
+//   posted       → post FB thành công (có fbPostId)
+//   failed       → lỗi (xem errorMsg)
+model LoginSession {
+  id         String    @id @default(cuid())
+  userId     String
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("login_sessions")
+}
+
+// OrderCommission — track từng đơn Shopee Affiliate riêng biệt (per-order).
+// Cải tiến từ AffiliateCommissionDaily (aggregate) — giờ mỗi đơn 1 row.
+//
+// Mỗi đơn có thể đổi trạng thái theo thời gian:
+//   pending → completed → (đã trả commission)
+//   pending → cancelled → (huỷ, commission = 0)
+//
+// Upload CSV mới chỉ UPSERT đơn nào có trong CSV. Đơn ko có trong CSV → giữ nguyên data cũ.
+// Dashboard + Quản lý Campaign aggregate từ table này:
+//   - Dashboard: GROUP BY shopeeAccountId (filter status != 'cancelled')
+//   - Camp manager: GROUP BY subId2 (filter status != 'cancelled')
+model OrderCommission {
+  id              String  @id @default(cuid())
+  userId          String
+  shopeeAccountId String?
+
+  // Order identity (unique key)
+  orderId String // Shopee order ID
+
+  // Sub IDs
+  subId1 String?
+  subId2 String?
+  subId3 String?
+  subId4 String?
+  subId5 String?
+
+  // Times
+  clickTime    DateTime?
+  purchaseTime DateTime?
+  completeTime DateTime?
+  // Truncated to day (UTC) — for fast date range queries
+  clickDate    DateTime  @db.Date
+
+  // Status: simplified to 3 values
+  status String @default("pending") // pending | completed | cancelled
+
+  // Money
+  commission Float // Hoa hồng ròng tiếp thị liên kết (đã sum tất cả items của đơn)
+  orderValue Float? // Giá trị đơn hàng
+
+  // Tracking metadata
+  shopName    String?
+  shopId      String?
+  productName String? // Tên item đầu tiên (representative)
+  itemCount   Int     @default(1)
+  channel     String? // Facebook / Others / ...
+
+  // Source tracking
+  source String @default("manual") // sync (Shopee API) | manual (CSV upload)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopeeAccount ShopeeAffiliateToken? @relation(fields: [shopeeAccountId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, shopeeAccountId, orderId])
+  @@index([userId, subId2, clickDate])
+  @@index([userId, shopeeAccountId, clickDate])
+  @@index([userId, status])
+  @@index([userId, clickDate])
+  @@map("order_commission")
+}
+
+model AdAccount {
+  id                       String    @id @default(cuid())
+  name                     String
+  actId                    String
+  status                   AccStatus @default(ON)
+  budget                   Int       @default(0)
+  userId                   String
+  // Business ID (Business Manager so huu TKQC) - sync tu FB API field `business.id`.
+  // Hien thi tren trang /billing cot "ID goc".
+  businessId               String?
+  // Daily spend limit Meta dat (scrape tu FB UI boi Chrome extension, FB API khong expose).
+  // Hien thi tren trang /billing cot "Limit". Cap nhat moi khi user vao billing page.
+  dailySpendLimit          BigInt?
+  dailySpendLimitUpdatedAt DateTime?
+  // groupId LEGACY — không dùng nữa. Đã di chuyển sang AdAccountGroupAssignment (per-month).
+  // Giữ tạm để fallback cho code cũ; xoá sau khi mọi nơi đã dùng assignment.
+  groupId                  String?
+  // User tích chọn TK này để track/keo ads (lưu DB thay localStorage để sync cross-browser).
+  // Default true → TK mới sync về tự động được track. User có thể uncheck.
+  isSelected               Boolean   @default(true)
+
+  // ===== Billing info (FB không expose, user nhập tay) =====
+  bankName         String? // Tên ngân hàng phát hành thẻ (vd "Vietcombank")
+  cardOwnerName    String? // Tên chủ thẻ (vd "Lê Trọng Quy")
+  paymentThreshold BigInt? // Ngưỡng billing FB tính (VND), copy từ Ads Manager
+  billingNotes     String? // Ghi chú khác cho kế toán
+
+  createdAt DateTime @default(now())
+
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     AccountGroup?        @relation(fields: [groupId], references: [id])
+  pages     FanPage[]
+  posts     Post[]
+  campaigns Campaign[]
+  // assignments REMOVED — table giờ key theo (userId, actId), không FK đến AdAccount.id
+  billings  FbAdAccountBilling[]
+  invoices  FbAdAccountInvoice[]
+
+  @@map("ad_accounts")
+}
+
+// Snapshot daily billing info cho mỗi TKQC.
+// Cron 7h sáng VN → fetch FB Graph API → upsert vào table này.
+// Dùng để: track limit Meta giảm theo thời gian, history balance, predict threshold.
+model FbAdAccountBilling {
+  id          String  @id @default(cuid())
+  userId      String
+  adAccountId String? // Nullable: SetNull khi AdAccount bị xoá để giữ history
+
+  snapshotDate DateTime @db.Date
+
+  // Money fields — VND có thể > 2.1 tỷ → BigInt
+  amountSpentTotal BigInt  @default(0) // lifetime total đã chi
+  dailySpendLimit  BigInt? // Meta đặt; null nếu không có limit
+  balance          BigInt? // Số dư hiện tại (chưa thanh toán)
+  spendCap         BigInt? // User-set cap
+
+  accountStatus String // ACTIVE/DISABLED/PENDING/...
+  currency      String @default("VND")
+
+  fundingSource String? // "Visa **** 6090"
+  fundingType   String? // CREDIT_CARD/PAYPAL/...
+
+  // Flags computed khi snapshot
+  limitReduced      Boolean @default(false) // limit giảm > 30% vs hôm qua
+  limitDeltaPercent Float? // % thay đổi vs hôm qua (negative = giảm)
+
+  createdAt DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // BUG FIX: trước là onDelete: Cascade → khi sync recreate AdAccount, billing history bị wipe
+  // (cùng pattern bug đã fix với AdAccountGroupAssignment 2026-05-13). Đổi sang SetNull để
+  // giữ history; query lookup theo userId vẫn work.
+  adAccount AdAccount? @relation(fields: [adAccountId], references: [id], onDelete: SetNull)
+
+  @@unique([adAccountId, snapshotDate])
+  @@index([userId, snapshotDate(sort: Desc)])
+  @@index([userId, limitReduced])
+  @@map("fb_ad_account_billings")
+}
+
+// Invoices/transactions từ FB billing API.
+// Dùng cho kế toán làm thuế.
+model FbAdAccountInvoice {
+  id          String @id @default(cuid())
+  userId      String
+  adAccountId String
+
+  fbInvoiceId        String // FB transaction id (unique per account)
+  billingPeriodStart DateTime?
+  billingPeriodEnd   DateTime?
+  invoiceDate        DateTime // ngày tạo invoice
+  totalAmount        BigInt // tổng chưa thuế (VND)
+  totalTax           BigInt?
+  totalAmountWithTax BigInt?
+  paymentStatus      String? // paid/pending/failed
+  paymentTerm        String? // PREPAY/POSTPAY/...
+  fundingSource      String? // snapshot tại thời điểm thanh toán
+  currency           String    @default("VND")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([adAccountId, fbInvoiceId])
+  @@index([userId, invoiceDate(sort: Desc)])
+  @@map("fb_ad_account_invoices")
+}
+
+// Gán TKQC vào nhóm theo TỪNG THÁNG (M2M + thời gian).
+// monthKey = "YYYY-MM" cho tháng cụ thể, hoặc "default" làm fallback khi tháng chưa được set.
+// Mỗi (accountId, monthKey) chỉ thuộc 1 group → không double-count.
+// groupId NULL = "tombstone": explicit không thuộc nhóm nào cho tháng này (override default).
+// Assignment NHÓM cho TKQC theo từng tháng.
+// IMMUTABLE key (userId, actId): không bị mất khi AdAccount bị xoá+tạo lại từ sync.
+// (Trước đây dùng FK accountId với cascade → mất khi acc recreate. Đã fix.)
+model AdAccountGroupAssignment {
+  id        String   @id @default(cuid())
+  userId    String // Owner — kết hợp với actId để uniquely identify assignment
+  actId     String // FB ad account id (act_xxx) — IMMUTABLE per FB account
+  groupId   String? // null = tombstone (chưa nhóm cho tháng này)
+  monthKey  String // "YYYY-MM" | "default"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group AccountGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, actId, monthKey])
+  @@index([groupId])
+  @@index([monthKey])
+  @@index([userId, actId])
+  @@map("ad_account_group_assignments")
+}
+
+model FanPage {
+  id                    String   @id @default(cuid())
+  name                  String
+  pageId                String
+  category              String   @default("")
+  userId                String
+  accountId             String?
+  // User tích chọn page này để track (lưu DB thay localStorage để sync cross-browser).
+  isSelected            Boolean  @default(true)
+  // Auto-manage threshold per-fanpage. Cron 13h check rule ads/hh:
+  //  - autoBudgetUpThreshold (vd 60): camp có ads/hh 3 ngày < 60% AND sum spend > 100k → x1.3 budget
+  //  - autoOffThreshold (vd 110): camp có ads/hh 3 ngày > 110% AND sum spend > 100k → PAUSED
+  // Null = chưa config → SKIP camp của fanpage này.
+  autoBudgetUpThreshold Int?
+  autoOffThreshold      Int?
+  // Page Ad Limit (cron 6h sang sync qua FB /act_X/ads_volume?page_id=Y).
+  // pageAdsTotal = ads running + in review TỪ MỌI ad account chạy trên page (limit FB tính).
+  // pageAdsCurrentAccount = ads chạy từ FanPage.accountId (TKQC đã gán).
+  // pageAdLimit = ngưỡng FB (250 default, có thể cao hơn cho page tier khác).
+  pageAdsTotal          Int?
+  pageAdsCurrentAccount Int?
+  pageAdLimit           Int?
+  pageAdLimitCheckedAt  DateTime?
+  pageAdLimitError      String?
+  createdAt             DateTime @default(now())
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account AdAccount? @relation(fields: [accountId], references: [id])
+  posts   Post[]
+
+  @@index([userId])
+  // PERF (P2.5): /insights + /trinh-quan-ly/ads lookup FanPage theo (userId, pageId)
+  // qua `where: { userId, pageId: { in: [...] } }`. Composite index → trực tiếp index hit.
+  @@index([userId, pageId])
+  @@map("fan_pages")
+}
+
+model Post {
+  id                String    @id @default(cuid())
+  fbId              String
+  name              String
+  link              String    @default("")
+  postedAt          DateTime?
+  userId            String
+  pageId            String?
+  campaignId        String?
+  adAccountId       String?
+  exported          Boolean   @default(false)
+  exportedAt        DateTime?
+  adCreated         Boolean   @default(false)
+  adCreatedAt       DateTime?
+  adError           String?
+  adErrorAt         DateTime?
+  // Auto-retry tracking: cron retry post adError sau 6h, max 3 lần.
+  // Reset về 0 khi adCreated=true. Khi >= 3 → cron stop retry, user phải manual.
+  adErrorRetryCount Int       @default(0)
+  // Soft delete: khi user xoá post, set deleted=true thay vì DELETE row.
+  // Sync-posts skip những fbId này → không re-import từ FB.
+  deleted           Boolean   @default(false)
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page      FanPage?   @relation(fields: [pageId], references: [id])
+  campaign  Campaign?  @relation(fields: [campaignId], references: [id])
+  adAccount AdAccount? @relation(fields: [adAccountId], references: [id])
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([pageId])
+  @@index([userId, exported])
+  // Composite index cho filter "pending" (default tab): userId + adCreated + exported + sort by createdAt.
+  @@index([userId, adCreated, exported, createdAt(sort: Desc)])
+  // Sync FB posts dùng `findMany({where: { userId, fbId: { in: [...] } }})` để check duplicate.
+  @@index([userId, fbId])
+  // PERF (P2.5): cron auto-camp filter `userId + adCreated=false + deleted=false + adError`.
+  // Trước hit composite cũ nhưng adError không cover → table scan partition. Index mới:
+  @@index([userId, adCreated, deleted, adError])
+  // PERF (P2.5): /insights + /lai-lo-camp lookup posts theo campaignId (DB id, không phải pageId).
+  // Query: `where: { userId, campaignId: { in: [...] }, deleted: false }`.
+  @@index([campaignId])
+  @@map("posts")
+}
+
+model Campaign {
+  id                      String    @id @default(cuid())
+  name                    String
+  campId                  String    @default("")
+  status                  String    @default("on")
+  budget                  Int       @default(100000)
+  cpc                     Int       @default(0)
+  clicks                  Int       @default(0)
+  clickSP                 Int       @default(0)
+  spend                   Int       @default(0)
+  commission              Int?
+  adsHH                   Float?
+  profitLoss              Int?
+  userId                  String
+  // Track TKQC: dùng để dọn camp đã xóa trên FB (sync-metrics tự delete khi mismatch).
+  adAccountId             String?
+  // Shopee product tracking (cron 6h sáng).
+  // productStatus: "active" | "deleted" | "hidden" | "out_of_stock"
+  // Auto-pause CHỈ khi deleted/hidden — out_of_stock chỉ cảnh báo.
+  productItemId           String?
+  productShopId           String?
+  productStatus           String?
+  productStockLeft        Int?
+  productLastCheckedAt    DateTime?
+  productAutoPausedAt     DateTime?
+  productAutoPausedReason String?
+  // Ngành hàng Shopee (lv0/lv1) - fetch tu Shopee API cung luc voi product check
+  // Dung de aggregate trang Trending Ngành.
+  productCategoryL1       String?
+  productCategoryL2       String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  // Ngày FB tạo campaign (immutable, sync 1 lần từ Graph API field created_time).
+  // Dùng cho Rule 3 auto-tắt camp không cắn tiền - chính xác hơn DB createdAt.
+  fbCreatedTime           DateTime?
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adAccount AdAccount? @relation(fields: [adAccountId], references: [id], onDelete: SetNull)
+  posts     Post[]
+  campLogs  CampLog[]
+
+  @@index([userId])
+  @@index([adAccountId])
+  // Composite index cho sync-metrics query: WHERE userId AND campId IN [...]
+  @@index([userId, campId])
+  @@map("campaigns")
+}
+
+model FbToken {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  appId      String
+  appSecret  String
+  shortToken String
+  longToken  String
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("fb_tokens")
+}
+
+model ShopeeAffiliateToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String    @default("Shopee Account")
+  appId      String
+  apiKey     String
+  groupId    String?
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user             User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group            AccountGroup?              @relation(fields: [groupId], references: [id])
+  commissions      AffiliateCommissionDaily[]
+  orderCommissions OrderCommission[]
+  bonuses          ShopeeBonus[]
+
+  @@unique([userId, appId])
+  @@index([userId])
+  @@map("shopee_affiliate_tokens")
+}
+
+// Cookie-based session của nick Shopee Affiliate (khác với OpenAPI AppID+AppSecret).
+// Dùng để gọi endpoint internal affiliate.shopee.vn → generate link affiliate bulk.
+// Cookie thường expire sau vài tuần — user phải vào /chuyen-link-shopee paste lại.
+// Tiền thưởng Shopee Affiliate (Voucher Reels, Voucher ads, % doanh thu, ...).
+// Tính cộng vào tổng hoa hồng theo date range Dashboard.
+model ShopeeBonus {
+  id              String   @id @default(cuid())
+  userId          String
+  shopeeAccountId String
+  date            DateTime @db.Date // Ngày nhận thưởng (để filter theo Dashboard)
+  programName     String // Tên chương trình
+  amount          Float // Số tiền
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopeeAccount ShopeeAffiliateToken @relation(fields: [shopeeAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, shopeeAccountId, date])
+  @@map("shopee_bonuses")
+}
+
+model AccountGroup {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String   @default("#4f7ef8")
+  taxType   String? // "personal" | "household" | "company"
+  taxId     String? // MST
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts      AdAccount[]
+  shopees       ShopeeAffiliateToken[]
+  taxRecords    TaxRecord[]
+  adAssignments AdAccountGroupAssignment[]
+
+  @@unique([userId, name])
+  @@map("account_groups")
+}
+
+model TaxRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String
+  taxType   String // "personal" | "household" | "company"
+  fromDate  DateTime @db.Date
+  toDate    DateTime @db.Date
+  inputs    Json // form inputs raw
+  outputs   Json // computed outputs (taxableIncome, taxAmount, breakdown...)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group AccountGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([groupId])
+  @@map("tax_records")
+}
+
+model CampLog {
+  id         String   @id @default(cuid())
+  userId     String
+  campaignId String?
+  postId     String?
+  postName   String
+  postFbId   String
+  pageName   String   @default("")
+  campName   String   @default("")
+  campFbId   String   @default("")
+  status     String
+  errorMsg   String?
+  createdAt  DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt]) // cho retention DELETE
+  @@map("camp_logs")
+}
+
+model SheetMapping {
+  id         String    @id @default(cuid())
+  userId     String
+  sheetUrl   String
+  sheetName  String    @default("Sheet1")
+  lastSyncAt DateTime?
+  rowCount   Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sheet_mappings")
+}
+
+model AffiliateCommissionDaily {
+  id              String   @id @default(cuid())
+  userId          String
+  shopeeAccountId String?
+  subId2          String
+  date            DateTime @db.Date
+  commission      Float    @default(0)
+  orderCount      Int      @default(0)
+  clickCount      Int      @default(0)
+  // 'manual' = upload CSV (lock khỏi cron API ghi đè).
+  // 'sync' = từ cron Shopee API. NULL = legacy.
+  source          String?  @default("sync")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopeeAccount ShopeeAffiliateToken? @relation(fields: [shopeeAccountId], references: [id])
+
+  @@unique([userId, shopeeAccountId, subId2, date])
+  @@index([userId, date])
+  @@index([shopeeAccountId])
+  // Cho query group-by subId2 trong /api/campaigns: filter userId+date IN, group by subId2.
+  @@index([userId, subId2, date])
+  @@map("affiliate_commission_daily")
+}
+
+// Danh mục chi phí văn phòng — user tự thêm/sửa/xoá.
+model OfficeExpenseCategory {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String? // hex color cho donut chart, vd "#4F7EF8"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses OfficeExpense[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("office_expense_categories")
+}
+
+// Chi phí văn phòng — list khoản chi.
+model OfficeExpense {
+  id         String   @id @default(cuid())
+  userId     String
+  categoryId String? // nullable nếu category bị xoá
+  date       DateTime @db.Date
+  content    String // Nội dung chi
+  supplier   String? // Nhà cung cấp
+  amount     Float // Số tiền (VND)
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category OfficeExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([userId, categoryId])
+  @@map("office_expenses")
+}
+
+// =================== CRAWLER (theo dõi page khác để học/copy content) ===================
+
+// Page user đăng ký theo dõi (cron crawl hàng ngày + manual trigger).

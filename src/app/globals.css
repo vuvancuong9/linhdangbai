@@ -1,0 +1,156 @@
+@charset "UTF-8";
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  /* Dark (mặc định) */
+  --bg: #0f1117; --bg2: #181c27; --bg3: #1e2435;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+  --text: #e8ecf4; --muted: #6b7894;
+  --accent: #4f7ef8; --success: #2ecc8f; --warn: #f5a623; --danger: #e84d4d;
+  --pill-bg: rgba(79,126,248,0.1); --pill-text: #7aa3fb;
+  --shopee: #ee4d2d;
+  --shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+html[data-theme="light"] {
+  /* Light - off-white nhẹ, không trắng chói */
+  --bg: #eef0f5;
+  --bg2: #f7f8fb;
+  --bg3: #ffffff;
+  --border: rgba(20,30,60,0.08);
+  --border2: rgba(20,30,60,0.16);
+  --text: #1f2330;
+  --muted: #5e6a82;
+  --accent: #4f7ef8;
+  --success: #1aaa6e;
+  --warn: #d98a0c;
+  --danger: #d83b3b;
+  --pill-bg: rgba(79,126,248,0.12);
+  --pill-text: #2e58c7;
+  --shopee: #ee4d2d;
+  --shadow: 0 1px 2px rgba(20,30,60,.06);
+}
+
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 12px; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; transition: background-color .15s ease, color .15s ease; }
+* { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+input, select, button, textarea { font-family: inherit; }
+input, textarea, select { font-size: 16px; } /* prevent iOS zoom on focus */
+
+/* Checkbox default 26px (gấp đôi 13) — DỄ tick hơn.
+   KHÔNG dùng !important → checkbox có inline width/height (đa số ở table như quan-ly-campaign,
+   fanpage-posts, keo-ads) tự override về size cũ để không vỡ layout table hẹp.
+   Chỉ checkbox không có inline (modal/settings/admin permissions) áp dụng size mới này. */
+input[type="checkbox"] {
+  width: 26px;
+  height: 26px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+a { text-decoration: none; }
+
+/* Mobile responsive helpers */
+.mobile-only { display: none; }
+.desktop-only { display: inherit; }
+.hide-mobile { display: inherit; }
+
+/* Generic table wrapper for horizontal scroll trên mobile */
+.tbl-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Scrollbar dày + luôn hiện cho preset list của DateRangePicker */
+.dr-preset-scroll { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+.dr-preset-scroll::-webkit-scrollbar { width: 8px; }
+.dr-preset-scroll::-webkit-scrollbar-track { background: transparent; }
+.dr-preset-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+.dr-preset-scroll::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* Stat cards grid — auto fit theo screen */
+.grid-stats-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.grid-stats-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+@media (max-width: 1100px) {
+  .grid-stats-6, .grid-stats-5 { grid-template-columns: repeat(3, 1fr) !important; }
+}
+@media (max-width: 640px) {
+  .grid-stats-6, .grid-stats-5 { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* Action row — header buttons wrap on mobile */
+.row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 768px) {
+  .row-actions { gap: 6px !important; }
+  .row-actions > * { flex-shrink: 0; }
+}
+
+@media (max-width: 768px) {
+  body { font-size: 13px; }
+  input, textarea, select { font-size: 16px; } /* iOS no zoom */
+
+  .mobile-only { display: inherit !important; }
+  .desktop-only { display: none !important; }
+  .hide-mobile { display: none !important; }
+
+  /* Sidebar -> drawer */
+  .app-sidebar {
+    position: fixed !important;
+    left: 0; top: 48px !important;
+    height: calc(100vh - 48px) !important;
+    z-index: 200 !important;
+    width: 240px !important;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: 4px 0 16px rgba(0,0,0,.4);
+  }
+  .app-sidebar.open { transform: translateX(0); }
+  .app-overlay {
+    position: fixed; inset: 48px 0 0 0; background: rgba(0,0,0,.5);
+    z-index: 150; backdrop-filter: blur(2px);
+  }
+
+  /* Content padding nhỏ lại */
+  .app-content { padding: 12px !important; gap: 10px !important; }
+
+  /* Topbar */
+  .app-topbar { padding: 0 10px !important; }
+  .topbar-title { font-size: 12px !important; }
+  .topbar-name { display: none !important; }
+  .topbar-btn-text { display: none !important; }
+  .topbar-btn { padding: 4px 8px !important; min-width: 32px; justify-content: center; }
+
+  /* Modal full-width */
+  .app-modal { width: calc(100vw - 24px) !important; max-width: 420px !important; max-height: calc(100vh - 24px) !important; overflow-y: auto !important; }
+
+  /* Tables: cho overflow */
+  .tbl-wrap table { min-width: 600px; }
+
+  /* Cards stack 1 cột */
+  .grid-cards { grid-template-columns: 1fr !important; }
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .grid-3 { grid-template-columns: 1fr 1fr !important; }
+  .grid-4 { grid-template-columns: 1fr 1fr !important; }
+
+  /* Filter bar wrap */
+  .filter-bar { flex-wrap: wrap !important; gap: 6px !important; }
+  .filter-bar > * { flex: 1 1 calc(50% - 3px) !important; min-width: 0 !important; }
+  .filter-bar input, .filter-bar select { width: 100% !important; }
+
+  /* Toolbar buttons (Tải Campaigns / Upload Click / Sync TK ...) wrap */
+  .row-toolbar { flex-wrap: wrap !important; gap: 6px !important; }
+  .row-toolbar > * { white-space: nowrap; }
+
+  /* Config card grid — stack vertically */
+  .row-config { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+  .row-config > * { width: 100% !important; min-width: 0 !important; }
+
+  /* Page title → smaller font */
+  .page-title { font-size: 16px !important; }
+
+  /* Stack charts vertically */
+  .grid-charts { grid-template-columns: 1fr !important; }
+}
+
+/* Safe-area cho iPhone notch/home bar */
+@supports (padding: env(safe-area-inset-top)) {
+  .app-topbar { padding-top: env(safe-area-inset-top) !important; height: calc(48px + env(safe-area-inset-top)) !important; }
+  .app-sidebar { padding-bottom: env(safe-area-inset-bottom) !important; }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}

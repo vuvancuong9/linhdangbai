@@ -1,0 +1,37 @@
+{
+  "name": "FB Ads Manager - QuyBeo",
+  "short_name": "FB Ads",
+  "description": "Hệ thống quản lý quảng cáo Facebook + Shopee Affiliate",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef0f5",
+  "theme_color": "#4f7ef8",
+  "lang": "vi",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/dashboard", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Lãi/Lỗ Camp", "url": "/lai-lo-camp", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Trình quản lý", "url": "/trinh-quan-ly", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

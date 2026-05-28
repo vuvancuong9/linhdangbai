@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "FB Ads Manager Billing Sync (QuyBeo)",
+  "version": "5.1.0",
+  "description": "Auto sync threshold + balance + limit TKQC từ SMIT → app QuyBeo. Random 20-50p, 1 tab nhanh gọn.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "QuyBeo Billing Sync"
+  },
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://app.quybeo.com/*",
+    "https://adscheck.smit.vn/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://adscheck.smit.vn/*"
+      ],
+      "js": ["content-smit.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

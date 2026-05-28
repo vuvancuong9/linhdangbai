@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: -apple-system, sans-serif; width: 360px; padding: 14px; margin: 0; background: #f7f8fb; color: #1f2330; }
+    h3 { margin: 0 0 8px 0; font-size: 14px; }
+    .row { font-size: 12px; line-height: 1.5; color: #5e6a82; }
+    .ok { color: #1aaa6e; font-weight: 600; }
+    .warn { color: #d98a0c; }
+    .err { color: #d83b3b; }
+    .btn { display: inline-block; padding: 8px 14px; background: #4f7ef8; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 500; margin-top: 6px; }
+    .btn:hover { background: #3d6bd9; }
+    .btn:disabled { opacity: 0.5; cursor: wait; }
+    .btn.green { background: #2ecc8f; }
+    .btn.green:hover { background: #25a374; }
+    .small { font-size: 10px; color: #95a0b5; margin-top: 8px; line-height: 1.5; }
+    .divider { height: 1px; background: #e2e6ed; margin: 12px 0; }
+    .status-box { background: #fff; border: 1px solid #e2e6ed; border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-size: 11px; }
+    code { background: #fff; padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <h3>💰 QuyBeo Billing Sync</h3>
+  <div class="row" id="status">Đang kiểm tra...</div>
+
+  <div class="divider"></div>
+
+  <div style="font-size:11px;font-weight:600;color:#1f2330">🚀 SMIT Auto-sync (random 20-50p)</div>
+  <div class="small" style="margin-top:4px">Mở 1 tab adscheck.smit.vn → scrape bảng → POST bulk app · nhanh gọn, không động FB</div>
+  <div class="status-box" id="smitStatus">Chưa có lần sync nào</div>
+  <button class="btn" id="manualSmitSync" style="background:#9b59b6">🚀 Sync SMIT ngay</button>
+
+  <div class="divider"></div>
+
+  <button class="btn" id="openApp">Mở app.quybeo.com</button>
+
+  <div class="small">
+    Extension tự mở tab ẩn SMIT mỗi 20-50p random → scrape ngưỡng/số dư/limit/tổng tiêu của tất cả TKQC → cập nhật vào QuyBeo. Cần login adscheck.smit.vn trước.
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
