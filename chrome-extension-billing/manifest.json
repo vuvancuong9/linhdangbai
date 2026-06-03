@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "FB Ads Manager Billing Sync (QuyBeo)",
+  "name": "cuongbg — Billing Sync",
   "version": "5.1.0",
-  "description": "Auto sync threshold + balance + limit TKQC từ SMIT → app QuyBeo. Random 20-50p, 1 tab nhanh gọn.",
+  "description": "Auto sync threshold + balance + limit TKQC từ SMIT → cuongbg. Random 20-50p, 1 tab nhanh gọn.",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "QuyBeo Billing Sync"
+    "default_title": "cuongbg Billing Sync"
   },
   "permissions": [
     "storage",
@@ -13,7 +13,7 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://app.quybeo.com/*",
+    "https://linhdangbai-2odf.vercel.app/*",
     "https://adscheck.smit.vn/*"
   ],
   "content_scripts": [

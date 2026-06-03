@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     const text =
-      `🚨 <b>QuyBeo Extension - CẢNH BÁO FB</b>\n\n` +
+      `🚨 <b>cuongbg Extension - CẢNH BÁO FB</b>\n\n` +
       `User: <b>${escapeHtml(u.name || "?")}</b>\n` +
       `Lý do: <b>${escapeHtml(reason)}</b>\n` +
       `Kind: <code>${escapeHtml(kind)}</code>\n` +
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, message: "Đã gửi Telegram alert" }, { headers: buildCorsHeaders(req.headers.get("origin")) })
   } catch (e: any) {
     if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Chưa login app.quybeo.com" }, { status: 401, headers: buildCorsHeaders(req.headers.get("origin")) })
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401, headers: buildCorsHeaders(req.headers.get("origin")) })
     }
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Internal error" : (e?.message || "Error") }, { status: 500, headers: buildCorsHeaders(req.headers.get("origin")) })
   }

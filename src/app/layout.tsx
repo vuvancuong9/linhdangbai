@@ -3,7 +3,7 @@ import "./globals.css"
 import Providers from "@/components/Providers"
 
 export const metadata: Metadata = {
-  title: "FB Ads Manager",
+  title: "cuongbg",
   description: "He thong quan ly quang cao Facebook",
 }
 
@@ -25,8 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="FB Ads" />
-        <meta name="application-name" content="FB Ads Manager" />
+        <meta name="apple-mobile-web-app-title" content="cuongbg" />
+        <meta name="application-name" content="cuongbg" />
         <meta name="theme-color" content="#eef0f5" />
         {/* Icons */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />

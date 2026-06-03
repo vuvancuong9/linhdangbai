@@ -1,4 +1,18 @@
 // prisma/seed.ts
+//
+// Seed mẫu — ĐÃ GỠ các tài khoản demo công khai (admin@fb.com / admin2@fb.com / user@fb.com)
+// để tránh bất kỳ ai biết file gốc có thể đăng nhập web bằng mật khẩu mặc định "123456".
+//
+// Nếu muốn tạo super admin lần đầu, dùng:
+//   node scripts/promote-super-admin.js <email-cua-ban>
+// (sau khi tự tạo user đó qua UI hoặc qua admin SQL).
+//
+// Hoặc set 4 biến môi trường rồi chạy `npm run db:seed`:
+//   SEED_ADMIN_EMAIL    - email super admin
+//   SEED_ADMIN_NAME     - tên hiển thị
+//   SEED_ADMIN_PASSWORD - mật khẩu (≥10 ký tự, có chữ + số)
+//   SEED_ADMIN_ROLE     - SUPER_ADMIN | ADMIN (default SUPER_ADMIN)
+
 import { PrismaClient, Role } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
@@ -7,85 +21,34 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Seeding database...')
 
-  // Tạo admin
-  const adminPwd = await bcrypt.hash('123456', 10)
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@fb.com' },
+  const email = process.env.SEED_ADMIN_EMAIL
+  const name = process.env.SEED_ADMIN_NAME || 'Admin'
+  const password = process.env.SEED_ADMIN_PASSWORD
+  const roleStr = (process.env.SEED_ADMIN_ROLE || 'SUPER_ADMIN').toUpperCase()
+  const role = roleStr === 'ADMIN' ? Role.ADMIN : Role.SUPER_ADMIN
+
+  if (!email || !password) {
+    console.log('⚠️  Bỏ qua seed user — chưa set SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD.')
+    console.log('   Set 2 env này rồi chạy lại nếu muốn tạo super admin từ seed.')
+    return
+  }
+
+  if (password.length < 10) {
+    throw new Error('SEED_ADMIN_PASSWORD phải ≥ 10 ký tự (chính sách mật khẩu app).')
+  }
+
+  const hashed = await bcrypt.hash(password, 10)
+  const u = await prisma.user.upsert({
+    where: { email },
     update: {},
-    create: {
-      name: 'Nguyễn Trọng Quy',
-      email: 'admin@fb.com',
-      password: adminPwd,
-      role: Role.ADMIN,
-    },
+    create: { name, email, password: hashed, role },
   })
-
-  // Tạo admin 2
-  const admin2 = await prisma.user.upsert({
-    where: { email: 'admin2@fb.com' },
-    update: {},
-    create: {
-      name: 'Trần Thị Mai',
-      email: 'admin2@fb.com',
-      password: adminPwd,
-      role: Role.ADMIN,
-    },
-  })
-
-  // Tạo user
-  const userPwd = await bcrypt.hash('123456', 10)
-  const user = await prisma.user.upsert({
-    where: { email: 'user@fb.com' },
-    update: {},
-    create: {
-      name: 'Lê Văn User',
-      email: 'user@fb.com',
-      password: userPwd,
-      role: Role.USER,
-    },
-  })
-
-  // Seed tài khoản ads cho admin
-  await prisma.adAccount.createMany({
-    skipDuplicates: true,
-    data: [
-      { name: 'Nguyễn Store - Chính', actId: 'act_2847361920', status: 'ON', budget: 100000, userId: admin.id },
-      { name: 'Brand Vietnam QC', actId: 'act_9182736450', status: 'ON', budget: 500000, userId: admin.id },
-      { name: 'Backup Account', actId: 'act_5019283746', status: 'ERROR', budget: 0, userId: admin.id },
-    ],
-  })
-
-  // Seed fanpage cho admin
-  await prisma.fanPage.createMany({
-    skipDuplicates: true,
-    data: [
-      { name: 'Nguyễn Store Official', pageId: '107382940162', category: 'Cửa hàng bán lẻ', userId: admin.id },
-      { name: 'Vietnam Tech News', pageId: '203847561029', category: 'Công nghệ & khoa học', userId: admin.id },
-      { name: 'Ẩm thực Việt Nam', pageId: '364829105738', category: 'Nhà hàng', userId: admin.id },
-    ],
-  })
-
-  // Seed tài khoản ads cho user
-  await prisma.adAccount.createMany({
-    skipDuplicates: true,
-    data: [
-      { name: 'TechShop Media', actId: 'act_7364829105', status: 'ON', budget: 200000, userId: user.id },
-    ],
-  })
-
-  await prisma.fanPage.createMany({
-    skipDuplicates: true,
-    data: [
-      { name: 'TechShop Vietnam', pageId: '495018273640', category: 'Cửa hàng điện tử', userId: user.id },
-    ],
-  })
-
-  console.log('✅ Seed hoàn tất!')
-  console.log(`   Admin: admin@fb.com / 123456`)
-  console.log(`   Admin: admin2@fb.com / 123456`)
-  console.log(`   User:  user@fb.com / 123456`)
+  console.log(`✅ Seed user: ${u.email} (${u.role})`)
 }
 
 main()
-  .catch(console.error)
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
   .finally(() => prisma.$disconnect())

@@ -23,7 +23,7 @@ const CRON_SECRET = (): string => {
 export function startCronJobs() {
   // Sync posts FB mỗi 10 phút.
   // FLAG isRunning được reset trong FINALLY để tránh stuck nếu crash.
-  // Trước là 5 phút, giảm xuống 10 phút để tiết kiệm I/O Supabase (Quy 2026-05-08).
+  // Trước là 5 phút, giảm xuống 10 phút để tiết kiệm I/O Supabase.
   cron.schedule(
     "*/10 * * * *",
     async () => {
@@ -56,7 +56,7 @@ export function startCronJobs() {
   // Gọi trực tiếp function thay vì self-fetch HTTP → ổn định, không phụ thuộc APP_URL/CRON_SECRET.
   // Chạy SHEET trước, AFFLINK sau → AffLink override đúng (key match dài hơn thường thắng).
   // Lý do offset: tránh race với sync-posts (chạy ở phút 0,10,20,30...) — mapping chạy ở phút 3,18,33,48 sau khi posts đã insert xong.
-  // Trước là 5 phút, giảm xuống 15 phút để tiết kiệm I/O Supabase (Quy 2026-05-08).
+  // Trước là 5 phút, giảm xuống 15 phút để tiết kiệm I/O Supabase.
   cron.schedule(
     "3,18,33,48 * * * *",
     async () => {

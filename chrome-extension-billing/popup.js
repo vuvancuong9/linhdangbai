@@ -1,5 +1,7 @@
 // Popup v5.1.0: chi con SMIT sync.
 
+const APP_BASE = "https://linhdangbai-2odf.vercel.app"
+
 const statusEl = document.getElementById("status")
 const smitStatusEl = document.getElementById("smitStatus")
 const openBtn = document.getElementById("openApp")
@@ -7,13 +9,13 @@ const smitBtn = document.getElementById("manualSmitSync")
 
 async function checkLogin() {
   try {
-    const r = await fetch("https://app.quybeo.com/api/auth/me", { method: "GET", credentials: "include" })
+    const r = await fetch(APP_BASE + "/api/auth/me", { method: "GET", credentials: "include" })
     if (r.ok) {
       const d = await r.json()
       const u = d?.data?.user || d?.user || d
       statusEl.innerHTML = `<span class="ok">✅ Đã login: ${u?.name || u?.email || "OK"}</span>`
     } else if (r.status === 401) {
-      statusEl.innerHTML = `<span class="err">❌ Chưa login app.quybeo.com</span>`
+      statusEl.innerHTML = `<span class="err">❌ Chưa đăng nhập</span>`
     } else {
       statusEl.innerHTML = `<span class="warn">⚠ Status HTTP ${r.status}</span>`
     }
@@ -43,7 +45,7 @@ function escapeHtml(s) {
 }
 
 openBtn.addEventListener("click", () => {
-  chrome.tabs.create({ url: "https://app.quybeo.com/billing" })
+  chrome.tabs.create({ url: APP_BASE + "/billing" })
 })
 
 smitBtn.addEventListener("click", async () => {

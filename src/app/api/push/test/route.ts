@@ -10,7 +10,7 @@ export async function POST() {
     const user = await requireAuth()
     const sent = await sendPushToUser(user.userId, {
       title: "🔔 Test thông báo",
-      body: "Push hoạt động! Đây là tin nhắn test từ app.quybeo.com.",
+      body: "Push hoạt động! Đây là tin nhắn test từ cuongbg.",
       url: "/",
       tag: "test",
     })

@@ -3,13 +3,20 @@
 // "Allow-Credentials: true" (browser reject). Whitelist origin explicit:
 //   - chrome-extension://<id>
 //   - moz-extension://<id> (Firefox)
-//   - https://app.quybeo.com (web app self-call)
+//   - Domain của chính app (từ env NEXT_PUBLIC_APP_URL) — self-call
+//
+// Origin nào KHÔNG nằm trong list trên sẽ bị reject (string rỗng) → browser
+// không cho phép request có credentials. Đây là phòng thủ bắt buộc để không
+// một domain bên ngoài nào (kể cả domain cũ của repo nguyên gốc) gọi được
+// API có cookie auth của user.
+
+const SELF_ORIGIN = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
 
 export function buildExtCorsHeaders(origin: string | null): Record<string, string> {
   const allowedOrigin = origin && (
     origin.startsWith("chrome-extension://") ||
     origin.startsWith("moz-extension://") ||
-    origin === "https://app.quybeo.com"
+    (SELF_ORIGIN && origin === SELF_ORIGIN)
   ) ? origin : ""
   return {
     "Access-Control-Allow-Origin": allowedOrigin,

@@ -863,7 +863,7 @@ export default function BillingPage() {
               <strong>Cách lấy Chat ID:</strong><br/>
               1. Trong Telegram → search <code>@userinfobot</code> → bấm Start.<br/>
               2. Bot trả về số <code>Id: 123456789</code> — copy vào ô bên dưới.<br/>
-              3. <strong>Quan trọng:</strong> Search bot QuyBeo (do anh tạo qua @BotFather) → bấm Start để bot có quyền gửi tin.
+              3. <strong>Quan trọng:</strong> Search bot Telegram của bạn (tạo bằng @BotFather, set TELEGRAM_BOT_TOKEN trên server) → bấm Start để bot có quyền gửi tin.
             </div>
 
             <div>

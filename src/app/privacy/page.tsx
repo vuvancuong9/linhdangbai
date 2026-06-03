@@ -45,7 +45,7 @@ export default function PrivacyPage() {
       <p>Ứng dụng dùng HTTPS bắt buộc, mã hoá tokens, JWT cookie httpOnly + SameSite strict cho phiên đăng nhập, rate-limit chống brute-force. Nếu phát hiện sự cố bảo mật, ứng dụng sẽ thông báo người dùng trong vòng 72 giờ.</p>
 
       <h2 style={{ fontSize: 20, marginTop: 28, marginBottom: 8 }}>6. Liên hệ</h2>
-      <p>Email: <a href="mailto:trongquy4499@gmail.com" style={{ color: "#1877f2" }}>trongquy4499@gmail.com</a></p>
+      <p>Email: <a href="mailto:cuongbghvtc@gmail.com" style={{ color: "#1877f2" }}>cuongbghvtc@gmail.com</a></p>
 
       <div style={{ marginTop: 40, paddingTop: 16, borderTop: "1px solid #eee", fontSize: 12, color: "#999" }}>
         © 2026 FB Ads Manager. <a href="/data-deletion" style={{ color: "#1877f2" }}>Yêu cầu xoá dữ liệu</a>.

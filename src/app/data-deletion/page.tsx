@@ -1,7 +1,7 @@
 // Trang Data Deletion — public, không cần login.
 // FB yêu cầu URL này khi review app có Facebook Login.
 
-export const metadata = { title: "Hướng dẫn xoá dữ liệu — FB Ads Manager" }
+export const metadata = { title: "Hướng dẫn xoá dữ liệu — cuongbg" }
 
 export default function DataDeletionPage() {
   return (
@@ -13,7 +13,7 @@ export default function DataDeletionPage() {
 
       <h2 style={{ fontSize: 20, marginTop: 28, marginBottom: 8 }}>Cách 1: Tự xoá tài khoản trong ứng dụng</h2>
       <ol>
-        <li>Đăng nhập vào ứng dụng tại <a href="https://app.quybeo.com" style={{ color: "#1877f2" }}>app.quybeo.com</a></li>
+        <li>Đăng nhập vào ứng dụng tại <a href="https://linhdangbai-2odf.vercel.app" style={{ color: "#1877f2" }}>linhdangbai-2odf.vercel.app</a></li>
         <li>Vào <b>Đổi MK / Quản lý tài khoản</b> (góc phải topbar).</li>
         <li>Bấm <b>Yêu cầu xoá tài khoản</b>.</li>
         <li>Hệ thống sẽ xoá toàn bộ dữ liệu liên quan trong vòng 7 ngày: thông tin tài khoản, tokens FB/Shopee, video trên R2, dữ liệu commission, posts, campaigns, kho video.</li>
@@ -22,7 +22,7 @@ export default function DataDeletionPage() {
       <h2 style={{ fontSize: 20, marginTop: 28, marginBottom: 8 }}>Cách 2: Gửi email yêu cầu xoá</h2>
       <p>Nếu mày không thể đăng nhập, gửi email tới:</p>
       <p style={{ fontSize: 16, fontWeight: 600 }}>
-        <a href="mailto:trongquy4499@gmail.com?subject=Yeu cau xoa du lieu FB Ads Manager" style={{ color: "#1877f2" }}>trongquy4499@gmail.com</a>
+        <a href="mailto:cuongbghvtc@gmail.com?subject=Yeu cau xoa du lieu FB Ads Manager" style={{ color: "#1877f2" }}>cuongbghvtc@gmail.com</a>
       </p>
       <p>Tiêu đề: <code>Yêu cầu xoá dữ liệu FB Ads Manager</code></p>
       <p>Nội dung email cần có:</p>

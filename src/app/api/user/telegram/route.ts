@@ -85,7 +85,7 @@ export async function POST() {
 
     const r = await sendTelegramMessage(
       u.telegramChatId,
-      `<b>🤖 QuyBeo Alert</b>\n\nXin chào <b>${u.name || "bạn"}</b>!\nKết nối Telegram thành công ✅\n\nBạn sẽ nhận cảnh báo khi <b>balance/threshold ≥ 80%</b> của TKQC có threshold &gt; 2.000.000đ.\nCron check 10p mỗi lần.`,
+      `<b>🤖 cuongbg Alert</b>\n\nXin chào <b>${u.name || "bạn"}</b>!\nKết nối Telegram thành công ✅\n\nBạn sẽ nhận cảnh báo khi <b>balance/threshold ≥ 80%</b> của TKQC có threshold &gt; 2.000.000đ.\nCron check 10p mỗi lần.`,
     )
     if (!r.ok) {
       return NextResponse.json({

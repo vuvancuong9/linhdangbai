@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
     }, { headers: buildExtCorsHeaders(req.headers.get("origin")) })
   } catch (e: any) {
     if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Chưa login app.quybeo.com" }, { status: 401, headers: buildExtCorsHeaders(req.headers.get("origin")) })
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401, headers: buildExtCorsHeaders(req.headers.get("origin")) })
     }
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Internal error" : (e?.message || "Error") }, { status: 500, headers: buildExtCorsHeaders(req.headers.get("origin")) })
   }

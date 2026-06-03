@@ -7,7 +7,7 @@ const newPassword = process.argv[3]
 
 if (!email || !newPassword) {
   console.error("Usage: node scripts/change-password.js <email> <new-password>")
-  console.error("Ví dụ: node scripts/change-password.js admin@fb.com matkhau-moi-123")
+  console.error("Ví dụ: node scripts/change-password.js ban@vidu.com MatKhauMoi2026")
   process.exit(1)
 }
 

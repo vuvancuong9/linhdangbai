@@ -43,3 +43,5 @@ _*.ts
 
 # claude code local settings
 .claude/
+
+.vercel

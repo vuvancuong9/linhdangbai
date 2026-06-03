@@ -11,10 +11,10 @@
 // Background co the bao "WAIT_FOR_DATA" - content tu poll cho den khi co data.
 
 (function () {
-  if (window.__quybeoSmitInjected) return
-  window.__quybeoSmitInjected = true
+  if (window.__fbadsSmitInjected) return
+  window.__fbadsSmitInjected = true
 
-  console.log("[QuyBeo SMIT] Content script loaded on", window.location.href)
+  console.log("[FBAds SMIT] Content script loaded on", window.location.href)
 
   function parseVnNumber(text) {
     if (text == null) return null
@@ -49,7 +49,7 @@
       }
     }
     if (best) {
-      console.log("[QuyBeo SMIT] findMainTable: <table> match score", bestScore)
+      console.log("[FBAds SMIT] findMainTable: <table> match score", bestScore)
       return best
     }
 
@@ -63,7 +63,7 @@
       }
     }
     if (best) {
-      console.log("[QuyBeo SMIT] findMainTable: [role=table] match score", bestScore)
+      console.log("[FBAds SMIT] findMainTable: [role=table] match score", bestScore)
       return best
     }
 
@@ -87,7 +87,7 @@
       }
     }
     if (smallestMatch) {
-      console.log("[QuyBeo SMIT] findMainTable: smallest div match (text len=" + smallestLen + ")")
+      console.log("[FBAds SMIT] findMainTable: smallest div match (text len=" + smallestLen + ")")
       return smallestMatch
     }
 
@@ -157,7 +157,7 @@
     const hasCellBased = rows.length > 0 && Array.from(rows).some(r => r.querySelectorAll('td, [role="cell"]').length > 0)
 
     if (hasCellBased && (colMap.threshold !== undefined || colMap.balance !== undefined)) {
-      console.log("[QuyBeo SMIT] scrapeRows: cell-based mode, colMap:", colMap)
+      console.log("[FBAds SMIT] scrapeRows: cell-based mode, colMap:", colMap)
       const result = []
       let skipped = 0
       for (const row of rows) {
@@ -184,12 +184,12 @@
           totalSpent: parseVnNumber(getCell(colMap.totalSpent)),
         })
       }
-      console.log(`[QuyBeo SMIT] Scraped (cell-based) ${result.length} rows, skipped ${skipped}`)
+      console.log(`[FBAds SMIT] Scraped (cell-based) ${result.length} rows, skipped ${skipped}`)
       return { ok: true, rows: result }
     }
 
     // Phan 2: STRUCTURAL/DIV mode — chia rows theo direct children, parse text
-    console.log("[QuyBeo SMIT] scrapeRows: structural/div mode")
+    console.log("[FBAds SMIT] scrapeRows: structural/div mode")
     // Tim row container: thuong la 1 div con cua match container, co N children = N rows
     let rowContainer = table
     // Neu match container co nhieu cap, dao xuong tim 1 cap co >= 5 children
@@ -211,7 +211,7 @@
       return null
     }
     rowContainer = findRowContainer(table) || table
-    console.log("[QuyBeo SMIT] rowContainer children:", rowContainer.children.length)
+    console.log("[FBAds SMIT] rowContainer children:", rowContainer.children.length)
 
     const result = []
     let skipped = 0
@@ -233,7 +233,7 @@
     if (result.length === 0) {
       return { ok: false, error: `Khong scrape duoc row nao (rowContainer.children=${rowContainer.children.length}, skipped=${skipped})` }
     }
-    console.log(`[QuyBeo SMIT] Scraped (structural) ${result.length} rows, skipped ${skipped}`)
+    console.log(`[FBAds SMIT] Scraped (structural) ${result.length} rows, skipped ${skipped}`)
     return { ok: true, rows: result }
   }
 
@@ -270,11 +270,11 @@
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg?.type === "SCRAPE_SMIT_NOW") {
-      console.log("[QuyBeo SMIT] Received SCRAPE_SMIT_NOW")
+      console.log("[FBAds SMIT] Received SCRAPE_SMIT_NOW")
       waitForDataReady().then(ready => {
         if (!ready) {
           const d = diagnose()
-          console.warn("[QuyBeo SMIT] Diagnose:", d)
+          console.warn("[FBAds SMIT] Diagnose:", d)
           let errMsg = "Bang SMIT khong co data."
           if (d.isLogin) {
             errMsg = "SMIT chua dang nhap - hay login adscheck.smit.vn truoc."

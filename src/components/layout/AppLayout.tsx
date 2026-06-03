@@ -160,7 +160,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div style={{ width: 24, height: 24, background: "var(--accent)", borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg viewBox="0 0 16 16" width="12" height="12" fill="#fff"><path d="M8 1L14 4V12L8 15L2 12V4Z"/></svg>
           </div>
-          <span className="topbar-title" style={{ fontSize: 13, fontWeight: 600 }}>FB <span style={{ color: "var(--accent)" }}>Ads Manager</span></span>
+          <span className="topbar-title" style={{ fontSize: 13, fontWeight: 600 }}><span style={{ color: "var(--accent)" }}>cuongbg</span></span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--bg3)", border: "1px solid var(--border2)", borderRadius: 20, padding: "3px 10px 3px 4px", cursor: "pointer" }}>

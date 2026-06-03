@@ -1,7 +1,12 @@
 const { PrismaClient } = require("@prisma/client")
 const prisma = new PrismaClient()
 
-const TARGET_EMAIL = process.argv[2] || "admin@fb.com"
+const TARGET_EMAIL = process.argv[2]
+
+if (!TARGET_EMAIL) {
+  console.error("Usage: node scripts/promote-super-admin.js <email>")
+  process.exit(1)
+}
 
 async function main() {
   console.log(`Promote ${TARGET_EMAIL} → SUPER_ADMIN`)

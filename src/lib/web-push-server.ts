@@ -12,7 +12,7 @@ function ensureConfig() {
   if (configured) return true
   const pub = process.env.VAPID_PUBLIC_KEY
   const priv = process.env.VAPID_PRIVATE_KEY
-  const subject = process.env.VAPID_SUBJECT || "mailto:noreply@app.quybeo.com"
+  const subject = process.env.VAPID_SUBJECT || "mailto:cuongbghvtc@gmail.com"
   if (!pub || !priv) {
     console.warn("[web-push] VAPID keys chưa set — push sẽ không hoạt động")
     return false

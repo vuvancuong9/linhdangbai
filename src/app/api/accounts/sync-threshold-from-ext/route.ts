@@ -17,7 +17,7 @@ export async function OPTIONS(req: NextRequest) {
 //   dailyLimit?: number | null         // daily spend limit Meta dat (optional)
 // }
 // Update AdAccountBillingInfo.paymentThreshold + AdAccount.dailySpendLimit.
-// Auth: cookie session tu app.quybeo.com.
+// Auth: cookie session tu chinh app (NEXT_PUBLIC_APP_URL).
 export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth()
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     }, { headers: buildExtCorsHeaders(req.headers.get("origin")) })
   } catch (e: any) {
     if (e?.message === "UNAUTHORIZED") {
-      return NextResponse.json({ error: "Chưa login app.quybeo.com. Login ở tab khác trước." }, { status: 401, headers: buildExtCorsHeaders(req.headers.get("origin")) })
+      return NextResponse.json({ error: "Chưa đăng nhập. Login ở tab khác trước." }, { status: 401, headers: buildExtCorsHeaders(req.headers.get("origin")) })
     }
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Internal error" : (e?.message || "Error") }, { status: 500, headers: buildExtCorsHeaders(req.headers.get("origin")) })
   }

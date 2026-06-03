@@ -72,13 +72,19 @@ Mở trình duyệt: **http://localhost:3000**
 
 ---
 
-## 👤 Tài khoản demo
+## 👤 Tạo tài khoản đầu tiên
 
-| Role  | Email              | Mật khẩu |
-|-------|--------------------|-----------|
-| Admin | admin@fb.com       | 123456    |
-| Admin | admin2@fb.com      | 123456    |
-| User  | user@fb.com        | 123456    |
+Không seed sẵn tài khoản demo. Để tạo super admin lần đầu:
+
+```bash
+# Set 3 biến môi trường rồi chạy seed
+SEED_ADMIN_EMAIL=ban@vidu.com \
+SEED_ADMIN_NAME="Tên Bạn" \
+SEED_ADMIN_PASSWORD="MatKhauItNhat10KyTu1" \
+npm run db:seed
+```
+
+Hoặc tạo user qua UI trên trang `/admin` (cần đã có 1 admin sẵn), hoặc dùng `scripts/promote-super-admin.js <email>` để nâng cấp 1 user thường lên SUPER_ADMIN.
 
 ---
 
